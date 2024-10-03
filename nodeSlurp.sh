@@ -51,7 +51,7 @@ function slurpData() {
         # MQTT password 
         mqttPass=$(grep -o 'password: .*' $cwd/$nodeNum.yaml | grep -o ' .*')
 
-        # bluetooth pin "fixedPin: 123456" the pin is 123456
+        # bluetooth pin
         fixedPin=$(grep -o 'fixedPin: [0-9]*' $cwd/$nodeNum.yaml | grep -o '[0-9]*')
 
         # wifi password
@@ -89,6 +89,13 @@ function saveData() {
     meshtastic --info > $cwd/node-info.txt
     # collect node.yaml
     meshtastic --export-config > $cwd/node.yaml
+
+    # evaluate the node-info.txt for meshtastic version
+    if grep -q "pip install --upgrade meshtastic" $cwd/node-info.txt; then
+        echo "meshtastic tools need to be updated run one of the following commands"
+        echo "pip install --upgrade meshtastic"
+        echo "pip install --upgrade meshtastic --break-system-packages"
+    fi
 
     # no device detected
     if grep -q "No Serial Meshtastic device detected" $cwd/node-info.txt; then
@@ -162,13 +169,6 @@ if whereis meshtastic | grep -q bin/meshtastic; then
             fi
         fi
     done
-
-    # evaluate the node-info.txt for meshtastic version
-    if grep -q "pip install --upgrade meshtastic" $cwd/node-info.txt; then
-        echo "meshtastic tools need to be updated run one of the following commands"
-        echo "pip install --upgrade meshtastic"
-        echo "pip install --upgrade meshtastic --break-system-packages"
-    fi
 else
     # if it is not found
     echo "meshtastic not found"
