@@ -109,3 +109,4 @@ echo "no commands to inject"
 #meshtastic --set lora.region US
 echo "done, happy meshing!"
 exit 0
+# end of script
