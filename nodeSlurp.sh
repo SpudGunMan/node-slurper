@@ -172,8 +172,9 @@ if whereis meshtastic | grep -q bin/meshtastic; then
 else
     # if it is not found
     echo "meshtastic not found"
-    echo "apt-get install -y python3-pip"
-    echo "install -U meshtastic"
+    echo "sudo apt-get install -y python3-pip"
+    echo "pip install -U meshtastic"
+    echo "(or) pip install -U meshtastic --break-system-packages"
     exit 1
 fi
 
