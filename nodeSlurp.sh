@@ -5,21 +5,26 @@
 
 # User defined variables
 injectKeys=true
+shutdown=true
 
 function injectData() {
     # inject commands into the node update the following commands with your data
     # uncomment and add your keys to the end of line
     echo ""
     echo "attempting to inject commands into the node, please wait..."
-    #meshtastic --ch-add MeshAround --ch-set psk base64:
+    #meshtastic --ch-add MeshAround --ch-set psk base64:Do/Th3/MeSh/ArOuNd/Now==
     #sleep 1
     #meshtastic --set security.admin_key base64:
     #sleep 1
     #meshtastic --ch-add admin --ch-set psk base64:
     #sleep 1
+    meshtastic --ch-set module_settings.position_precision 32 --ch-index 0
     #meshtastic --set lora.region US
-    #echo "done, happy meshing!"
-    echo "no commands to inject"
+    echo "done, with commands - powering off node"
+
+    if [ "$shutdown" = true ]; then
+        meshtastic --shutdown
+    fi
     echo ""
     echo "waiting for new device or press ctrl-c to exit"
 }
