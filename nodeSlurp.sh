@@ -15,9 +15,12 @@ function injectData() {
     echo "set lora profile"
     #meshtastic --set lora.role client_mute
     #sleep 1
+    #meshtastic --set lora.usepreset true
     #meshtastic --set lora.profile LongFast
     #sleep 1
-    #meshtastic --set lora.frequency 915000000
+    #meshtastic --set lora.overrideFrequency 915000000
+    #sleep 1
+    #meshtastic --set lora.channel 20
     #sleep 1
     echo "set mqtt"
     #meshtastic --set mqtt.enabled true
