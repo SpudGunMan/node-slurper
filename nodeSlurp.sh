@@ -81,6 +81,12 @@ function slurpData() {
         # parse the owner from the node.yaml
         owner=$(grep -o 'owner: ".*"' $cwd/$nodeNum.yaml | grep -o '".*"')
 
+        # lora profile
+        channelNum=$(grep -o 'channelNum: [0-9]*' $cwd/$nodeNum.yaml | grep -o '[0-9]*')
+        overrideFrequency=$(grep -o 'overrideFrequency: [0-9]*' $cwd/$nodeNum.yaml | grep -o '[0-9]*')
+        modemPreset=$(grep -o 'modemPreset: .*' $cwd/$nodeNum.yaml | grep -o ' .*')
+        role=$(grep -o 'role: .*' $cwd/$nodeNum.yaml | grep -o ' .*')
+
         # MQTT password 
         mqttPass=$(grep -o 'password: .*' $cwd/$nodeNum.yaml | grep -o ' .*')
 
@@ -109,6 +115,7 @@ function slurpData() {
         echo "admin key:$adminKey"
         echo "dm private key:$dmPrivateKey"
         echo "dm public key:$dmPublicKey"
+        printf "lora profile: $modemPreset $role channel $channelNum freq $overrideFrequency"
         echo "node data saved to $nodeNum-Info.txt and $nodeNum.yaml"
         echo ""
         if [ "$injectKeys" = false ]; then
