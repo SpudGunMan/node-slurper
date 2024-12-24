@@ -12,13 +12,38 @@ function injectData() {
     # uncomment and add your keys to the end of line
     echo ""
     echo "attempting to inject commands into the node, please wait..."
+    echo "set lora profile"
+    #meshtastic --set lora.role client_mute
+    #sleep 1
+    #meshtastic --set lora.profile LongFast
+    #sleep 1
+    #meshtastic --set lora.frequency 915000000
+    #sleep 1
+    echo "set mqtt"
+    #meshtastic --set mqtt.enabled true
+    #sleep 1
+    #meshtastic --set mqtt.server mqtt.example.com
+    #sleep 1
+    #meshtastic --set mqtt.user mqttuser
+    #sleep 1
+    #meshtastic --set mqtt.password mqttPass
+    #sleep 1
+    echo "set bluetooth"
+    #meshtastic --set bluetooth.enabled true
+    #sleep 1
+    #meshtastic --set bluetooth.pin fixedPin
+    #sleep 1
+    echo "setting channel"
     #meshtastic --ch-add MeshAround --ch-set psk base64:Do/Th3/MeSh/ArOuNd/Now==
     #sleep 1
+    meshtastic --ch-set module_settings.position_precision 32 --ch-index 0
+    sleep 1
+    echo "adding security keys"
     #meshtastic --set security.admin_key base64:
     #sleep 1
     #meshtastic --ch-add admin --ch-set psk base64:
     #sleep 1
-    meshtastic --ch-set module_settings.position_precision 32 --ch-index 0
+    echo "enable radio"
     #meshtastic --set lora.region US
     echo "done, with commands - powering off node"
 
