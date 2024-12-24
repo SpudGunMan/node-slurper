@@ -45,10 +45,10 @@ function injectData() {
     #sleep 1
     echo "enable radio"
     #meshtastic --set lora.region US
-    echo "done, with commands - powering off node"
-
+  
     if [ "$shutdown" = true ]; then
         meshtastic --shutdown
+        echo "done, with commands - powering off node"
     fi
     echo ""
     echo "waiting for new device or press ctrl-c to exit"
