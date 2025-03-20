@@ -48,3 +48,7 @@ def decode_mesh_url(url):
                 print(f"Binary data: {decoded_bytes}")
     except Exception as e:
         print(f"Error decoding base64 string: {e}")
+
+if __name__ == "__main__":
+    url = input("Enter URL: ")
+    decode_mesh_url(url)
