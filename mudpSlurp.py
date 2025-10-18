@@ -3,6 +3,7 @@
 # UDP Interface Listener
 # credit to pdxlocations for all of this core work https://github.com/pdxlocations/
 # depends on: pip install meshtastic protobuf zeroconf pubsub
+# meshtastic library copyright and licensed by Meshtastic LLC
 # 2025 Kelly Keeton K7MHI
 from pubsub import pub
 from meshtastic.protobuf import mesh_pb2, portnums_pb2
