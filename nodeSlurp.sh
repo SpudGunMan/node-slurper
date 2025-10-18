@@ -69,6 +69,9 @@ function slurpData() {
         # parse the node-info.txt for node number
         nodeNum=$(grep -o '"myNodeNum": [0-9]*' $cwd/node-info.txt| grep -o '[0-9]*')
 
+        # parse the node-info.txt for isFavorite
+        isFavorite=$(grep -o '"isFavorite": .*' $cwd/node-info.txt | grep -o ' .*')
+
         #move the node-info.txt to nodeNum-Info.txt
         mv $cwd/node-info.txt $cwd/$nodeNum-Info.txt
 
