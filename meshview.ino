@@ -2,7 +2,8 @@
 // Make sure to install the meashtastic library and generate the .pb.h and .pb.c files from the Meshtastic .proto definitions
 // https://github.com/meshtastic/protobufs/tree/master/meshtastic
 
-// Example to receive and decode Meshtastic UDP packets
+// Example to receive and decode Meshtastic UDP packets unencrypted only.
+// Add decryption if you want to handle encrypted packets, I would love to accept a PR for that!
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
