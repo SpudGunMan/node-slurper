@@ -107,6 +107,7 @@ pub.subscribe(on_recieve, "mesh.rx.packet")
 # | 13          | CHANNEL_NODEINFO_APP   | Channel node info              |
 # | 256         | PRIVATE_APP            | Private app (custom use)       |
 # See: https://github.com/meshtastic/protobufs/blob/main/meshtastic/protobuf/portnums.proto
+# See: https://buf.build/meshtastic/protobufs/docs/main:meshtastic#meshtastic.PortNum
 
 
 
