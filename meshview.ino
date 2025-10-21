@@ -1,4 +1,5 @@
 // Example to receive and decode Meshtastic UDP packets
+// meshtastic library copyright and licensed by Meshtastic LLC
 // Make sure to install the meashtastic library and generate the .pb.h and .pb.c files from the Meshtastic .proto definitions
 // https://github.com/meshtastic/protobufs/tree/master/meshtastic
 
@@ -31,6 +32,8 @@
 // - Nonce is generated from packet ID and sender node ID
 // - Key is decoded from base64 format
 // - See: https://meshtastic.org/docs/overview/encryption/
+// Sketch uses 918731 bytes of program storage space
+// Global variables use 45220 bytes of dynamic memory
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
