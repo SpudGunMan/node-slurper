@@ -19,7 +19,7 @@ const char* ssid = "YOUR_WIFI_SSID";
 const char* password = "YOUR_WIFI_PASSWORD";
 
 // Meshtastic network credentials
-const char* mesh_id = "LongFast"; // Your Channel name
+const char* mesh_ch = "LongFast"; // Your Channel name
 const char* default_key = "1PG7OiApB1nwvP+rz05pAQ=="; // Your network key here
 
 uint8_t aes_key[16]; // Buffer for decoded key
