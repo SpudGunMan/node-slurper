@@ -50,8 +50,11 @@ const char* password = "YOUR_WIFI_PASSWORD";
 
 // Default Meshtastic key for public channels (base64 encoded)
 // Change this to your channel's key if using a custom channel
+const char* channel_name = "LongFast";
 const char* default_key_base64 = "1PG7OiApB1nwvP+rz05pAQ==";
 uint8_t aes_key[16]; // Buffer for decoded key (128 bits)
+// hash of channel_name:default_key_base64 
+
 bool key_initialized = false;
 
 const char* MCAST_GRP = "224.0.0.69";
@@ -395,6 +398,8 @@ void loop() {
       Serial.print("Unhandled portnum "); Serial.print((int)data.portnum);
       Serial.println(", showing payload as hex:");
       printHex(data.payload.bytes, data.payload.size);
+      Serial.print("Payload as ASCII: ");
+      printAscii(data.payload.bytes, data.payload.size);
       break;
     }
   }
