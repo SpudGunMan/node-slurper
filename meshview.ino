@@ -2,12 +2,40 @@
 // Make sure to install the meashtastic library and generate the .pb.h and .pb.c files from the Meshtastic .proto definitions
 // https://github.com/meshtastic/protobufs/tree/master/meshtastic
 
-// Example to receive and decode Meshtastic UDP packets unencrypted only.
-// Add decryption if you want to handle encrypted packets, I would love to accept a PR for that!
+// Example to receive and decode Meshtastic UDP packets with encryption support.
+// Uses mbedTLS for AES-CTR decryption (built into ESP32).
+//
+// FEATURES:
+// - Receives UDP multicast packets from Meshtastic devices
+// - Decodes outer MeshPacket protobuf structure
+// - Handles both encrypted and unencrypted (decoded) packets
+// - Decrypts encrypted packets using AES-CTR with provided key
+// - Decodes inner Data messages (text, position, telemetry, etc.)
+//
+// REQUIREMENTS:
+// - ESP32 board (for mbedTLS support)
+// - WiFi connection
+// - Meshtastic protobuf definitions (.pb.h and .pb.c files)
+// - nanopb library for protobuf decoding
+//
+// USAGE:
+// 1. Set your WiFi SSID and password below
+// 2. Set your Meshtastic channel key (base64 encoded) in default_key_base64
+//    - Default key "1PG7OiApB1nwvP+rz05pAQ==" is for public LongFast channel
+//    - Get your channel key from Meshtastic app or device settings
+// 3. Upload to ESP32
+// 4. Open Serial Monitor at 115200 baud
+//
+// ENCRYPTION:
+// - Uses AES-128 in CTR mode (same as Meshtastic firmware)
+// - Nonce is generated from packet ID and sender node ID
+// - Key is decoded from base64 format
+// - See: https://meshtastic.org/docs/overview/encryption/
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
-// #include <AESLib.h> // or another AES library
+#include <mbedtls/aes.h>
+#include <mbedtls/base64.h>
 
 #include "pb_decode.h"
 #include "meshtastic/mesh.pb.h"      // MeshPacket, Position, etc.
@@ -17,8 +45,11 @@
 const char* ssid = "YOUR_WIFI_SSID";
 const char* password = "YOUR_WIFI_PASSWORD";
 
-const char* default_key = "1PG7OiApB1nwvP+rz05pAQ=="; // Your network key here
-uint8_t aes_key[16]; // Buffer for decoded key
+// Default Meshtastic key for public channels (base64 encoded)
+// Change this to your channel's key if using a custom channel
+const char* default_key_base64 = "1PG7OiApB1nwvP+rz05pAQ==";
+uint8_t aes_key[16]; // Buffer for decoded key (128 bits)
+bool key_initialized = false;
 
 const char* MCAST_GRP = "224.0.0.69";
 const uint16_t MCAST_PORT = 4403;
@@ -28,9 +59,23 @@ unsigned long udpPacketCount = 0;
 WiFiUDP udp;
 IPAddress multicastIP;
 
+// AES context for mbedTLS
+mbedtls_aes_context aes;
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
+
+  // Initialize AES context
+  mbedtls_aes_init(&aes);
+
+  // Decode the base64 key
+  if (!decodeBase64Key()) {
+    Serial.println("Failed to decode base64 key!");
+  } else {
+    Serial.println("AES key decoded successfully.");
+    key_initialized = true;
+  }
 
   Serial.println("Scanning for WiFi networks...");
   int n = WiFi.scanNetworks();
@@ -96,15 +141,96 @@ void printAscii(const uint8_t* buf, size_t len) {
   Serial.println();
 }
 
-void decodeKey() {
-  // Convert base64 key to raw bytes
-  // You may need to add a base64 decoding function/library
-  // Example: decode_base64(default_key, aes_key, sizeof(aes_key));
+bool decodeBase64Key() {
+  // Decode base64 key to raw bytes
+  size_t olen = 0;
+  int ret = mbedtls_base64_decode(aes_key, sizeof(aes_key), &olen, 
+                                   (const unsigned char*)default_key_base64, 
+                                   strlen(default_key_base64));
+  
+  if (ret != 0 || olen != 16) {
+    Serial.print("Base64 decode failed, ret=");
+    Serial.print(ret);
+    Serial.print(", olen=");
+    Serial.println(olen);
+    return false;
+  }
+
+  Serial.print("Decoded AES key (hex): ");
+  printHex(aes_key, 16);
+  return true;
 }
 
-void decryptPayload(const uint8_t* encrypted, size_t len, uint8_t* decrypted) {
-  // Use AESLib or similar to decrypt
-  // Example: aes128_dec_single(decrypted, encrypted, aes_key);
+void initNonce(uint32_t fromNode, uint32_t packetId, uint8_t* nonce) {
+  // Initialize 16-byte nonce for AES-CTR
+  // Based on Meshtastic CryptoEngine::initNonce
+  memset(nonce, 0, 16);
+  
+  // Pack the block counter (starts at 0) in first 8 bytes (little-endian)
+  nonce[0] = 0;
+  nonce[1] = 0;
+  nonce[2] = 0;
+  nonce[3] = 0;
+  nonce[4] = 0;
+  nonce[5] = 0;
+  nonce[6] = 0;
+  nonce[7] = 0;
+  
+  // Pack packetId in next 4 bytes (little-endian)
+  nonce[8] = (packetId >> 0) & 0xff;
+  nonce[9] = (packetId >> 8) & 0xff;
+  nonce[10] = (packetId >> 16) & 0xff;
+  nonce[11] = (packetId >> 24) & 0xff;
+  
+  // Pack fromNode in last 4 bytes (little-endian)
+  nonce[12] = (fromNode >> 0) & 0xff;
+  nonce[13] = (fromNode >> 8) & 0xff;
+  nonce[14] = (fromNode >> 16) & 0xff;
+  nonce[15] = (fromNode >> 24) & 0xff;
+}
+
+bool decryptPayload(uint32_t fromNode, uint32_t packetId, const uint8_t* encrypted, size_t len, uint8_t* decrypted) {
+  if (!key_initialized) {
+    Serial.println("Key not initialized, cannot decrypt.");
+    return false;
+  }
+
+  if (len == 0 || len > 256) {
+    Serial.println("Invalid encrypted payload length.");
+    return false;
+  }
+
+  // Generate nonce for this packet
+  uint8_t nonce[16];
+  initNonce(fromNode, packetId, nonce);
+
+  Serial.print("Nonce (hex): ");
+  printHex(nonce, 16);
+
+  // Set up AES key for encryption (CTR mode uses encryption for both encrypt and decrypt)
+  int ret = mbedtls_aes_setkey_enc(&aes, aes_key, 128);
+  if (ret != 0) {
+    Serial.print("Failed to set AES key, ret=");
+    Serial.println(ret);
+    return false;
+  }
+
+  // Decrypt using AES-CTR
+  size_t nc_off = 0;
+  uint8_t stream_block[16];
+  memset(stream_block, 0, 16);
+  
+  uint8_t scratch[256];
+  memcpy(scratch, encrypted, len);
+  
+  ret = mbedtls_aes_crypt_ctr(&aes, len, &nc_off, nonce, stream_block, scratch, decrypted);
+  if (ret != 0) {
+    Serial.print("AES-CTR decryption failed, ret=");
+    Serial.println(ret);
+    return false;
+  }
+
+  return true;
 }
 
 void loop() {
@@ -153,14 +279,63 @@ void loop() {
   Serial.print("to: "); Serial.println(pkt.to);
   Serial.print("channel: "); Serial.println(pkt.channel);
 
-  // Only proceed if we have a decoded Data variant
-  if (pkt.which_payload_variant != meshtastic_MeshPacket_decoded_tag) {
-    Serial.println("Packet does not contain decoded Data (maybe encrypted or other variant).");
+  meshtastic_Data data = meshtastic_Data_init_zero;
+  bool has_data = false;
+
+  // Check if packet is encrypted
+  if (pkt.which_payload_variant == meshtastic_MeshPacket_encrypted_tag) {
+    Serial.println("Packet is encrypted, attempting to decrypt...");
+    
+    if (!key_initialized) {
+      Serial.println("Cannot decrypt: encryption key not initialized.");
+      delay(50);
+      return;
+    }
+
+    // Decrypt the payload
+    uint8_t decrypted[256];
+    size_t encrypted_len = pkt.encrypted.size;
+    
+    Serial.print("Encrypted payload size: ");
+    Serial.println(encrypted_len);
+    Serial.print("Encrypted payload (hex): ");
+    printHex(pkt.encrypted.bytes, encrypted_len);
+
+    if (decryptPayload(pkt.from, pkt.id, pkt.encrypted.bytes, encrypted_len, decrypted)) {
+      Serial.println("Decryption successful!");
+      Serial.print("Decrypted payload (hex): ");
+      printHex(decrypted, encrypted_len);
+      
+      // Try to decode the decrypted Data message
+      pb_istream_t data_stream = pb_istream_from_buffer(decrypted, encrypted_len);
+      if (pb_decode(&data_stream, meshtastic_Data_fields, &data)) {
+        Serial.println("Successfully decoded Data from decrypted payload.");
+        has_data = true;
+      } else {
+        Serial.println("Failed to decode Data from decrypted payload.");
+      }
+    } else {
+      Serial.println("Decryption failed.");
+      delay(50);
+      return;
+    }
+  } else if (pkt.which_payload_variant == meshtastic_MeshPacket_decoded_tag) {
+    // Packet is already decoded (unencrypted or from licensed mode)
+    Serial.println("Packet contains decoded Data (unencrypted).");
+    data = pkt.decoded;
+    has_data = true;
+  } else {
+    Serial.println("Packet does not contain decoded or encrypted data.");
     delay(50);
     return;
   }
 
-  const meshtastic_Data& data = pkt.decoded;
+  if (!has_data) {
+    Serial.println("No data to process.");
+    delay(50);
+    return;
+  }
+
   Serial.print("Portnum: "); Serial.println(data.portnum);
   Serial.print("Payload size: "); Serial.println(data.payload.size);
 
