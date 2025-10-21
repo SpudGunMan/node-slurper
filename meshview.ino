@@ -63,6 +63,9 @@ unsigned long udpPacketCount = 0;
 WiFiUDP udp;
 IPAddress multicastIP;
 
+// Forward declaration
+void processDataPayload(const meshtastic_Data& data);
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
