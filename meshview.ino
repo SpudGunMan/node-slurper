@@ -336,6 +336,15 @@ void loop() {
       return;
     }
     
+    // Check for buffer overflow protection
+    if (encrypted_len > 256) {
+      Serial.print("Encrypted payload too large: ");
+      Serial.print(encrypted_len);
+      Serial.println(" bytes (max 256). Skipping packet.");
+      delay(50);
+      return;
+    }
+    
     // Initialize nonce for decryption
     uint8_t nonce[16];
     initNonce(pkt.from, pkt.id, nonce);
