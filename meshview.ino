@@ -1,9 +1,33 @@
-// Example to receive and decode Meshtastic UDP packets
-// Make sure to install the meashtastic library and generate the .pb.h and .pb.c files from the Meshtastic .proto definitions
-// https://github.com/meshtastic/protobufs/tree/master/meshtastic
+// Meshtastic UDP Packet Decoder for ESP32
+// 
+// This sketch receives and decodes Meshtastic UDP packets (both encrypted and unencrypted).
+// It listens on the Meshtastic multicast address 224.0.0.69:4403
 //
-// This sketch supports both encrypted and unencrypted packets.
-// Configure your channels and keys below.
+// SETUP INSTRUCTIONS:
+// 1. Install required libraries in Arduino IDE:
+//    - Meshtastic protobufs (generate .pb.h and .pb.c files from https://github.com/meshtastic/protobufs)
+//    - mbedtls (included with ESP32 Arduino core)
+//
+// 2. Configure your WiFi credentials below (ssid and password)
+//
+// 3. Configure your Meshtastic channels:
+//    - Set the channel name (e.g., "LongFast", "MyChannel")
+//    - Set the base64-encoded PSK (Pre-Shared Key)
+//    - You can add up to 4 channels
+//
+// FINDING YOUR CHANNEL KEY:
+// - Use the Meshtastic app or CLI to get your channel settings
+// - The PSK is shown as a base64 string (e.g., "1PG7OiApB1nwvP+rz05pAQ==")
+// - Default Meshtastic channels use PSK "AQ==" (base64 for 0x01)
+//
+// ENCRYPTION DETAILS:
+// - Uses AES-CTR mode with 128 or 256-bit keys
+// - Nonce is derived from packet ID and sender node ID
+// - Supports Meshtastic's special PSK values (1-10 use default key variants)
+//
+// References:
+// - Meshtastic encryption: https://meshtastic.org/docs/overview/encryption/
+// - Protocol buffers: https://github.com/meshtastic/protobufs
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
@@ -36,15 +60,25 @@ const uint8_t DEFAULT_KEY[16] = {
 };
 
 // Configure your channels here
+// Format: {channel_name, base64_psk, {0}, 0, 0}
+// 
+// Examples:
+// - Default LongFast: {"LongFast", "AQ==", {0}, 0, 0}
+// - Custom channel: {"MyTeam", "1PG7OiApB1nwvP+rz05pAQ==", {0}, 0, 0}
+// - Default variant 2: {"Fast", "Ag==", {0}, 0, 0}
+//
+// Note: PSK "AQ==" is base64 for 0x01, which triggers use of the default Meshtastic key
+//       PSK "Ag==" is base64 for 0x02, which uses default key with last byte incremented by 1
+//       You can have up to MAX_CHANNELS different channel configurations
 #define MAX_CHANNELS 4
 ChannelConfig channels[MAX_CHANNELS] = {
-  {"LongFast", "AQ==", {0}, 0, 0},  // Default channel with default key
-  // Add more channels as needed:
-  // {"MyChannel", "1PG7OiApB1nwvP+rz05pAQ==", {0}, 0, 0},
+  {"LongFast", "AQ==", {0}, 0, 0},  // Default LongFast channel with default key
+  // Add more channels as needed (uncomment and configure):
+  // {"MyChannel", "1PG7OiApB1nwvP+rz05pAQ==", {0}, 0, 0},  // Custom channel example
   // {"", "", {0}, 0, 0},
   // {"", "", {0}, 0, 0},
 };
-int num_channels = 1;  // Update this when you add more channels
+int num_channels = 1;  // Update this count when you add more channels
 
 const char* MCAST_GRP = "224.0.0.69";
 const uint16_t MCAST_PORT = 4403;
@@ -331,9 +365,13 @@ void loop() {
           Serial.print(" (");
           Serial.print(channels[i].name);
           Serial.println(")");
+          Serial.print("Decrypted data (hex): ");
+          printHex(decrypted_data, encrypted_len);
           decrypted = true;
         } else {
-          Serial.println("Decryption worked but protobuf decode failed for channel " + String(i));
+          Serial.print("Decryption worked but protobuf decode failed for channel ");
+          Serial.print(i);
+          Serial.println(" - wrong key or data corruption?");
         }
       }
     }
