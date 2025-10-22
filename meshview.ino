@@ -332,18 +332,18 @@ void loop() {
   // Check if packet is encrypted
   if (pkt.which_payload_variant == meshtastic_MeshPacket_encrypted_tag) {
     Serial.println("Encrypted packet detected. Attempting decryption...");
-    
-    const pb_bytes_array_t& encrypted = pkt.encrypted;
-    Serial.printf("Encrypted payload size: %d bytes\n", encrypted.size);
-    
-    if (encrypted.size == 0) {
+
+    const pb_bytes_array_t* encrypted = (const pb_bytes_array_t*)&pkt.encrypted;
+    Serial.printf("Encrypted payload size: %d bytes\n", encrypted->size);
+
+    if (encrypted->size == 0) {
       Serial.println("Empty encrypted payload.");
       delay(50);
       return;
     }
-    
-    if (encrypted.size > 256) {
-      Serial.printf("Encrypted payload too large: %d bytes (max 256)\n", encrypted.size);
+
+    if (encrypted->size > 256) {
+      Serial.printf("Encrypted payload too large: %d bytes (max 256)\n", encrypted->size);
       delay(50);
       return;
     }
@@ -372,14 +372,26 @@ void loop() {
       Serial.printf("Trying channel %d (%s)...\n", i, channels[i].name);
       
       uint8_t decrypted_buffer[256];
-      if (decryptPayload(encrypted.bytes, encrypted.size, decrypted_buffer,
-                        channels[i].key, channels[i].key_length, 
-                        pkt.id, pkt.from)) {
-        
+      if (decryptPayload(encrypted->bytes, encrypted->size, decrypted_buffer,
+            channels[i].key, channels[i].key_length, 
+            pkt.id, pkt.from)) {
+  
         // Try to decode as Data protobuf
-        pb_istream_t dstream = pb_istream_from_buffer(decrypted_buffer, encrypted.size);
+        pb_istream_t dstream = pb_istream_from_buffer(decrypted_buffer, encrypted->size);
         if (pb_decode(&dstream, meshtastic_Data_fields, &data)) {
           Serial.printf("Successfully decrypted with channel %d!\n", i);
+
+          // Print channel info
+          Serial.print("Decoded channel: ");
+          Serial.print(channels[i].name);
+          Serial.print(":");
+          for (size_t k = 0; k < channels[i].key_length; k++) {
+            Serial.printf("%02X", channels[i].key[k]);
+          }
+          Serial.print(" (hash=0x");
+          Serial.printf("%02X", channels[i].hash);
+          Serial.println(")");
+
           decrypted = true;
           break;
         } else {
