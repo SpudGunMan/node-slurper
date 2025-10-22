@@ -41,6 +41,24 @@ node data saved to 425675309-Info.txt and 425675309.yaml
 
 ## Other Tools
 
+### meshview.ino
+
+An Arduino/ESP32 sketch to receive and decode Meshtastic UDP packets. Supports both encrypted and unencrypted packets with AES-CTR decryption.
+
+**Features:**
+- Receives UDP packets from Meshtastic multicast (224.0.0.69:4403)
+- Decrypts encrypted packets using AES-CTR mode
+- Supports multiple channel configurations
+- Handles Meshtastic default key variants
+- Decodes Position, Telemetry, and Text messages
+
+**Setup:**
+1. Open meshview.ino in Arduino IDE
+2. Configure WiFi credentials
+3. Configure your Meshtastic channel names and keys
+4. Upload to ESP32
+5. Open Serial Monitor to view decoded packets
+
 ### mudpSlurp
 
 A cli to slup the UDP data from mesh nodes
