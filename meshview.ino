@@ -341,6 +341,12 @@ void loop() {
       delay(50);
       return;
     }
+    
+    if (encrypted.size > 256) {
+      Serial.printf("Encrypted payload too large: %d bytes (max 256)\n", encrypted.size);
+      delay(50);
+      return;
+    }
 
     // Try decrypting with each configured channel
     // Strategy: Try the channel specified in packet first, then try all others
