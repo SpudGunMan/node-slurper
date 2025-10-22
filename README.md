@@ -41,6 +41,18 @@ node data saved to 425675309-Info.txt and 425675309.yaml
 
 ## Other Tools
 
+### meshview.ino
+
+An ESP32 Arduino sketch that receives and decodes Meshtastic UDP packets with full encryption support.
+
+**Features:**
+- Decrypts encrypted packets using AES-CTR
+- Supports multiple channels with different keys
+- Decodes Position, Telemetry, and Text messages
+- Compatible with Meshtastic's CryptoEngine
+
+**Documentation:** See [MESHVIEW_README.md](MESHVIEW_README.md) for detailed setup and usage instructions.
+
 ### mudpSlurp
 
 A cli to slup the UDP data from mesh nodes

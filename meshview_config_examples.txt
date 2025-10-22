@@ -1,0 +1,102 @@
+/**
+ * Meshview.ino Configuration Examples
+ * 
+ * Copy and paste these examples into your meshview.ino file
+ * to configure different channel setups.
+ */
+
+// ====================
+// EXAMPLE 1: Single Channel with Custom Key
+// ====================
+ChannelConfig channels[MAX_CHANNELS] = {
+  {"LongFast", "1PG7OiApB1nwvP+rz05pAQ==", {0}, 0, 0},
+  {"", "", {0}, 0, 0},
+  {"", "", {0}, 0, 0},
+  {"", "", {0}, 0, 0}
+};
+
+// ====================
+// EXAMPLE 2: Single Channel with Default Key (PSK=1)
+// ====================
+ChannelConfig channels[MAX_CHANNELS] = {
+  {"LongFast", "1", {0}, 0, 0},  // Uses DEFAULT_MESHTASTIC_KEY
+  {"", "", {0}, 0, 0},
+  {"", "", {0}, 0, 0},
+  {"", "", {0}, 0, 0}
+};
+
+// ====================
+// EXAMPLE 3: Multiple Channels with Different Keys
+// ====================
+ChannelConfig channels[MAX_CHANNELS] = {
+  {"LongFast", "1PG7OiApB1nwvP+rz05pAQ==", {0}, 0, 0},    // Primary channel
+  {"MediumSlow", "AQIDBAUGBwgJCgsMDQ4PEA==", {0}, 0, 0},  // Secondary channel
+  {"Admin", "AQIDBAUGBAQJDQ4PEBESExQVFg==", {0}, 0, 0},    // Admin channel
+  {"", "", {0}, 0, 0}                                       // Unused
+};
+
+// ====================
+// EXAMPLE 4: Mixed Default and Custom Keys
+// ====================
+ChannelConfig channels[MAX_CHANNELS] = {
+  {"LongFast", "1", {0}, 0, 0},                          // Default key (PSK=1)
+  {"Testing", "AQIDBAUGBwgJCgsMDQ4PEA==", {0}, 0, 0},   // Custom key
+  {"Emergency", "2", {0}, 0, 0},                         // Default key variant (PSK=2)
+  {"", "", {0}, 0, 0}
+};
+
+// ====================
+// EXAMPLE 5: Empty Channel Name (uses only key)
+// ====================
+ChannelConfig channels[MAX_CHANNELS] = {
+  {"", "1PG7OiApB1nwvP+rz05pAQ==", {0}, 0, 0},  // No channel name, just key
+  {"", "", {0}, 0, 0},
+  {"", "", {0}, 0, 0},
+  {"", "", {0}, 0, 0}
+};
+
+// ====================
+// NOTES:
+// ====================
+// 1. Base64 PSK keys are typically 22-24 characters ending with "=="
+// 2. PSK values "1" through "10" use the default Meshtastic key with increments
+// 3. Empty name ("") and empty psk_base64 ("") means the channel is unused
+// 4. The channel index in the array should match your Meshtastic channel number
+// 5. Get your PSK from: meshtastic --info (CLI) or Meshtastic app settings
+
+// ====================
+// HOW TO GET YOUR PSK:
+// ====================
+// 
+// Method 1 - Meshtastic CLI:
+//   $ meshtastic --info
+//   Look for "channels" section and copy the "psk" value
+//
+// Method 2 - Meshtastic Python API:
+//   $ meshtastic --export-config > config.yaml
+//   Look for the "psk" under your channel
+//
+// Method 3 - Meshtastic App:
+//   1. Open Meshtastic app
+//   2. Settings → Radio Config → Channels
+//   3. Tap your channel
+//   4. Long-press the PSK value to copy
+//
+// Method 4 - QR Code:
+//   1. Generate QR code from Meshtastic app
+//   2. Scan with QR reader
+//   3. URL contains channel settings including PSK
+//      Format: https://meshtastic.org/e/#...
+
+// ====================
+// TESTING YOUR CONFIGURATION:
+// ====================
+// 
+// 1. Upload the sketch to your ESP32
+// 2. Open Serial Monitor at 115200 baud
+// 3. Look for this output:
+//      "Initializing channels..."
+//      "Channel 0: name='LongFast', key_length=16, hash=0x42"
+// 4. If you see "Failed to decode key", check your PSK format
+// 5. When packets arrive, you should see:
+//      "Successfully decrypted with channel 0!"
