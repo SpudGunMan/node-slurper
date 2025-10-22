@@ -340,7 +340,16 @@ void loop() {
     uint8_t nonce[16];
     initNonce(pkt.from, pkt.id, nonce);
     
+    // Debug output for nonce
+    Serial.print("Nonce (hex): ");
+    printHex(nonce, 16);
+    Serial.print("Encrypted data (hex): ");
+    printHex(pkt.encrypted.bytes, min(encrypted_len, (size_t)32));  // Show first 32 bytes
+    
     // Try each configured channel key
+    // If the packet has a channel field, we could use it to select the right key,
+    // but for now we try all keys since the channel field in the packet might not
+    // directly correspond to our channel array index
     bool decrypted = false;
     uint8_t decrypted_data[256];
     
@@ -351,11 +360,17 @@ void loop() {
       Serial.print(i);
       Serial.print(" (");
       Serial.print(channels[i].name);
+      Serial.print(", hash=0x");
+      Serial.print(channels[i].hash, HEX);
       Serial.println(")...");
       
       // Decrypt the payload
       if (decryptPayload(pkt.encrypted.bytes, encrypted_len, decrypted_data,
                         channels[i].key, channels[i].key_len, nonce)) {
+        
+        // Show the decrypted data for debugging
+        Serial.print("Decrypted data (hex): ");
+        printHex(decrypted_data, encrypted_len);
         
         // Try to decode as protobuf Data
         pb_istream_t dec_stream = pb_istream_from_buffer(decrypted_data, encrypted_len);
@@ -365,14 +380,14 @@ void loop() {
           Serial.print(" (");
           Serial.print(channels[i].name);
           Serial.println(")");
-          Serial.print("Decrypted data (hex): ");
-          printHex(decrypted_data, encrypted_len);
           decrypted = true;
         } else {
-          Serial.print("Decryption worked but protobuf decode failed for channel ");
+          Serial.print("Protobuf decode failed for channel ");
           Serial.print(i);
-          Serial.println(" - wrong key or data corruption?");
+          Serial.println(" - trying next key...");
         }
+      } else {
+        Serial.println("Decryption failed for this channel.");
       }
     }
     
