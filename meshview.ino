@@ -343,13 +343,26 @@ void loop() {
     }
 
     // Try decrypting with each configured channel
+    // Strategy: Try the channel specified in packet first, then try all others
     bool decrypted = false;
+    int try_order[MAX_CHANNELS];
+    int try_count = 0;
+    
+    // First, add the channel specified in packet (if valid)
+    if (pkt.channel < MAX_CHANNELS && channels[pkt.channel].key_length > 0) {
+      try_order[try_count++] = pkt.channel;
+    }
+    
+    // Then add all other channels
     for (int i = 0; i < MAX_CHANNELS; i++) {
-      if (channels[i].key_length == 0) continue;
-      
-      // Check if channel matches (if channel index is set in packet)
-      if (pkt.channel != 0 && pkt.channel != i) continue;
-      
+      if (i != pkt.channel && channels[i].key_length > 0) {
+        try_order[try_count++] = i;
+      }
+    }
+    
+    // Try decryption with each channel in order
+    for (int idx = 0; idx < try_count; idx++) {
+      int i = try_order[idx];
       Serial.printf("Trying channel %d (%s)...\n", i, channels[i].name);
       
       uint8_t decrypted_buffer[256];
